@@ -24,15 +24,14 @@ export const useMap = () => {
     const directionsDisplay = new google.maps.DirectionsRenderer();
     directionsDisplay.setMap(map);
     const waypoints = data.locations.slice(0, 25).map((d) => {
+      // API only lets using 25 waypoints for free
       return {
         location: { lat: +d.latitude, lng: +d.longitude },
         stopover: false,
       };
     });
-    console.log(data);
     const origin = waypoints.shift().location;
     const destination = waypoints.pop().location;
-    console.log(waypoints);
     directionsService.route(
       {
         origin: origin,
