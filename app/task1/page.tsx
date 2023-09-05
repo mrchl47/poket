@@ -1,7 +1,5 @@
 "use client";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import "chartjs-plugin-style";
-import Link from "next/link";
 import React from "react";
 import {
   Chart,
