@@ -1,12 +1,19 @@
+"use client";
+
 import prisma from "@/db";
 import { route1 } from "@/helpers/routes";
-prisma.user.create({
-  data: {
-    username: "test",
-  },
-});
+import { GoogleMap } from "@react-google-maps/api";
+import { useMap } from "@/hooks/useMap";
+import { useRidesAPI } from "@/hooks/useRidesAPI";
+import Link from "next/link";
+export default function Task2() {
+  const { isLoaded, calculateAndDisplayRoute } = useMap();
+  const { data, error, isLoading } = useRidesAPI();
+  if (isLoading) {
+    return;
+  }
+  // UNCOMMENT TO ADD MOCK DATA TO DB
 
-export default async function Task2() {
   //   const user = await prisma.user.create({
   //     data: {
   //       username: "test",
@@ -25,12 +32,30 @@ export default async function Task2() {
   //     },
   //   });
 
-  const rides = await prisma.ride.findMany({
-    include: {
-      locations: true,
-    },
-  });
-  console.log("rides");
-  console.log(rides[0].locations);
-  return <div>eh</div>;
+  //
+
+  const containerStyle = {
+    width: "800px",
+    height: "400px",
+  };
+
+  if (!isLoaded) {
+    return <>Loading..</>;
+  }
+  if (error) {
+    console.dir(error.message);
+    return <>Something went wrong</>;
+  }
+  return (
+    <div>
+      {" "}
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        zoom={10}
+        onLoad={calculateAndDisplayRoute.bind(null, data)}
+      >
+        <></>
+      </GoogleMap>
+    </div>
+  );
 }
