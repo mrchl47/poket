@@ -1,5 +1,5 @@
 "use client";
-import { GoogleMap, useJsApiLoader } from "@react-google-maps/api";
+import { useJsApiLoader } from "@react-google-maps/api";
 type MapDataProps = {
   id: string;
   createdAt: string;
@@ -11,6 +11,10 @@ type MapDataProps = {
     rideId: String;
   }[];
 };
+type Location = {
+  lat: number;
+  lng: number;
+};
 export const useMap = () => {
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
@@ -21,32 +25,74 @@ export const useMap = () => {
       return;
     }
     const directionsService = new google.maps.DirectionsService();
-    const directionsDisplay = new google.maps.DirectionsRenderer();
-    directionsDisplay.setMap(map);
-    const waypoints = data.locations.slice(0, 25).map((d) => {
-      // API only lets using 25 waypoints for free
+    const stations = data.locations.map((d) => {
       return {
-        location: { lat: +d.latitude, lng: +d.longitude },
-        stopover: false,
+        lat: +d.latitude,
+        lng: +d.longitude,
       };
     });
-    const origin = waypoints.shift().location;
-    const destination = waypoints.pop().location;
-    directionsService.route(
-      {
-        origin: origin,
-        destination: destination,
-        waypoints: waypoints,
-        travelMode: "DRIVING",
-      },
-      (response, status) => {
-        if (status === "OK") {
-          directionsDisplay.setDirections(response);
-        } else {
-          window.alert("Directions request failed due to " + status);
+
+    const lngs = stations.map((station) => station.lng);
+    const lats = stations.map((station) => station.lat);
+    map.fitBounds({
+      west: Math.min.apply(null, lngs),
+      east: Math.max.apply(null, lngs),
+      north: Math.min.apply(null, lats),
+      south: Math.max.apply(null, lats),
+    });
+
+    const startMarker = new google.maps.Marker({
+      position: stations[0],
+      map: map,
+    });
+    const endMarker = new google.maps.Marker({
+      position: stations[stations?.length - 1],
+      map: map,
+    });
+
+    const perPart = 25;
+
+    const parts = stations.reduce(
+      (locations: Location[][], currentLocation: Location, index) => {
+        const locationIndex = Math.floor(index / perPart);
+        if (!locations[locationIndex]) {
+          locations[locationIndex] = [];
         }
-      }
+
+        locations[locationIndex].push(currentLocation);
+
+        return locations;
+      },
+      []
     );
+
+    const service_callback = function (response: any, status: string | number) {
+      if (status != "OK") {
+        console.log("Directions request failed due to " + status);
+        return;
+      }
+      const directionsDisplay = new google.maps.DirectionsRenderer();
+
+      directionsDisplay.setMap(map);
+      directionsDisplay.setOptions({
+        suppressMarkers: true,
+        preserveViewport: true,
+      });
+      directionsDisplay.setDirections(response);
+    };
+    parts.forEach((part) => {
+      const waypoints: google.maps.DirectionsWaypoint[] = [];
+      part?.forEach((location) => {
+        waypoints.push({ location, stopover: false });
+      });
+      const service_options = {
+        origin: part[0],
+        destination: part[part.length - 1],
+        waypoints,
+        travelMode: google.maps.TravelMode.DRIVING,
+      };
+      directionsService.route(service_options, service_callback);
+    });
   };
   return {
     isLoaded,
